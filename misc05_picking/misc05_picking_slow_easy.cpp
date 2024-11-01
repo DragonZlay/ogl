@@ -72,7 +72,7 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 
-const GLuint NumObjects = 1;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
+const GLuint NumObjects = 2;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
@@ -95,6 +95,8 @@ GLuint LightID;
 // TL
 const size_t CoordVertsCount = 6;
 Vertex CoordVerts[CoordVertsCount];
+const size_t GridVertsCount = 44;
+Vertex GridVerts[GridVertsCount];
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -183,6 +185,11 @@ void initOpenGL(void) {
 	NumVerts[0] = CoordVertsCount;
 
 	createVAOs(CoordVerts, NULL, 0);
+
+	VertexBufferSize[1] = sizeof(GridVerts);
+	NumVerts[1] = GridVertsCount;
+
+	createVAOs(GridVerts, NULL, 1);
 }
 
 void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
@@ -277,6 +284,16 @@ void createObjects(void) {
 	//-- GRID --//
 
 	// ATTN: Create your grid vertices here!
+	for (int i = 0; i < 22; i += 2) { //Horizontal Lines
+		GridVerts[i] = { { float(i) / 2.0f - 5.0f, 0.0, -5.0, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 0.0, 1.0} };
+		GridVerts[i + 1] = { { float(i) / 2.0f - 5.0f, 0.0, 5.0, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 0.0, 1.0 } };
+	}
+
+	for (int i = 22; i < 44; i += 2) { //Vertical Lines
+		GridVerts[i] = { { -5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 0.0, 1.0} };
+		GridVerts[i + 1] = { { 5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 0.0, 1.0 } };
+	}
+
 
 	//-- .OBJs --//
 
@@ -356,10 +373,12 @@ void renderScene(void) {
 		glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
 		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
-		glBindVertexArray(VertexArrayId[0]);	// Draw CoordAxes
-		glDrawArrays(GL_LINES, 0, NumVerts[0]);
+		for (int i = 0; i < NumObjects; i++) {
+			glBindVertexArray(VertexArrayId[i]);
+			glDrawArrays(GL_LINES, 0, NumVerts[i]);
 
-		glBindVertexArray(0);
+			glBindVertexArray(0);
+		}
 	}
 	glUseProgram(0);
 	// Draw GUI
