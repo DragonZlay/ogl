@@ -98,6 +98,21 @@ Vertex CoordVerts[CoordVertsCount];
 const size_t GridVertsCount = 44;
 Vertex GridVerts[GridVertsCount];
 
+
+const float radius = 10.0f;
+//float zpos = 10.0f;
+//float ypos = 10.0f;
+//float xpos = 10.0f;
+///float parallelaxis = 0.0f;
+//float orthogonalaxis = 0.0f
+// ;
+
+const float floatpi = 3.14159274101257324219;
+float camerayaw = 90.0f;
+float camerapitch = 30.0f;
+bool cameraselected = false;
+vec3 cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+
 int initWindow(void) {
 	// Initialise GLFW
 	if (!glfwInit()) {
@@ -156,7 +171,7 @@ void initOpenGL(void) {
 	//gProjectionMatrix = glm::ortho(-4.0f, 4.0f, -3.0f, 3.0f, 0.0f, 100.0f); // In world coordinates
 
 	// Camera matrix
-	gViewMatrix = glm::lookAt(glm::vec3(10.0, 10.0, 10.0f),	// eye
+	gViewMatrix = glm::lookAt(radius*cameradirection,	// eye
 		glm::vec3(0.0, 0.0, 0.0),	// center
 		glm::vec3(0.0, 1.0, 0.0));	// up
 
@@ -285,13 +300,13 @@ void createObjects(void) {
 
 	// ATTN: Create your grid vertices here!
 	for (int i = 0; i < 22; i += 2) { //Horizontal Lines
-		GridVerts[i] = { { float(i) / 2.0f - 5.0f, 0.0, -5.0, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 0.0, 1.0} };
-		GridVerts[i + 1] = { { float(i) / 2.0f - 5.0f, 0.0, 5.0, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 0.0, 1.0 } };
+		GridVerts[i] = { { float(i) / 2.0f - 5.0f, 0.0, -5.0, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 1.0, 0.0} };
+		GridVerts[i + 1] = { { float(i) / 2.0f - 5.0f, 0.0, 5.0, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 1.0, 0.0 } };
 	}
 
 	for (int i = 22; i < 44; i += 2) { //Vertical Lines
-		GridVerts[i] = { { -5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 0.0, 1.0} };
-		GridVerts[i + 1] = { { 5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 0.0, 1.0 } };
+		GridVerts[i] = { { -5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 1.0, 0.0} };
+		GridVerts[i + 1] = { { 5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 1.0, 0.0 } };
 	}
 
 
@@ -417,9 +432,89 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			break;
 		case GLFW_KEY_S:
 			break;
+		case GLFW_KEY_C:
+			cameraselected = !cameraselected;
+			break;
 		case GLFW_KEY_SPACE:
 			break;
+		case GLFW_KEY_UP:
+			if (cameraselected) {
+				camerapitch += 5.0f;
+				if (camerapitch >= 89.0)
+				{
+					camerapitch = 89.0f;
+				}
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
+			break;
+		case GLFW_KEY_DOWN:
+			if (cameraselected) {
+				camerapitch -= 5.0f;
+				if (camerapitch <= -89.0)
+				{
+					camerapitch = -89.0f;
+				}
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
+			break;
+		case GLFW_KEY_LEFT:
+			if (cameraselected) {
+				camerayaw += 5.0f;
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
+			break;
+		case GLFW_KEY_RIGHT:
+			if (cameraselected) {
+				camerayaw -= 5.0f;
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
+			break;
 		default:
+			break;
+		}
+	}
+	else if (action == GLFW_REPEAT) {
+		switch (key)
+		{
+		case GLFW_KEY_UP:
+			if (cameraselected) {
+				camerapitch += 5.0f;
+				if (camerapitch >= 89.0)
+				{
+					camerapitch = 89.0f;
+				}
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
+			break;
+		case GLFW_KEY_DOWN:
+			if (cameraselected) {
+				camerapitch -= 5.0f;
+				if (camerapitch <= -89.0)
+				{
+					camerapitch = -89.0f;
+				}
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
+			break;
+		case GLFW_KEY_LEFT:
+			if (cameraselected) {
+				camerayaw += 5.0f;
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
+			break;
+		case GLFW_KEY_RIGHT:
+			if (cameraselected) {
+				camerayaw -= 5.0f;
+				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			}
 			break;
 		}
 	}
@@ -447,7 +542,6 @@ int main(void) {
 
 	// Initialize OpenGL pipeline
 	initOpenGL();
-
 	// For speed computation
 	double lastTime = glfwGetTime();
 	int nbFrames = 0;
