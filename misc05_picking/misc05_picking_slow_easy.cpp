@@ -5,6 +5,9 @@
 #include <array>
 #include <stack>   
 #include <sstream>
+#include <iostream>
+#include <fstream>
+#include <string>
 // Include GLEW
 #include <GL/glew.h>
 // Include GLFW
@@ -14,6 +17,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+using namespace std;
 using namespace glm;
 // Include AntTweakBar
 #include <AntTweakBar.h>
@@ -22,6 +26,8 @@ using namespace glm;
 #include <common/controls.hpp>
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "..\objectLoading\tiny_obj_loader.h";
 
 const int window_width = 1024, window_height = 768;
 
@@ -45,6 +51,18 @@ typedef struct Vertex {
 		Normal[0] = coords[0];
 		Normal[1] = coords[1];
 		Normal[2] = coords[2];
+	}
+	void ModifyPosition(float x, float y, float z) {
+		Position[0] += x;
+		Position[1] += y;
+		Position[2] += z;
+	}
+	void ModifyVertexViaMatrix(glm::mat4 Matrix) {
+		glm::vec4 positionVector(Position[0], Position[1], Position[2], Position[3]);
+		glm::vec4 transformedVector = Matrix * positionVector;
+		for (int i = 0; i < 4; i++) {
+			Position[i] = transformedVector[i];
+		}
 	}
 };
 
@@ -72,7 +90,7 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 
-const GLuint NumObjects = 2;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
+const GLuint NumObjects = 5;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
@@ -95,9 +113,20 @@ GLuint LightID;
 // TL
 const size_t CoordVertsCount = 6;
 Vertex CoordVerts[CoordVertsCount];
-const size_t GridVertsCount = 44;
-Vertex GridVerts[GridVertsCount];
-
+Vertex* baseVerts;
+GLushort* baseIdcs;
+Vertex* topVerts;
+GLushort* topIdcs;
+Vertex* arm1Verts;
+GLushort* arm1Idcs;
+Vertex* jointVerts;
+GLushort* jointIdcs;
+Vertex* arm2Verts;
+GLushort* arm2Idcs;
+Vertex* penVerts;
+GLushort* penIdcs;
+Vertex* buttonVerts;
+GLushort* buttonIdcs;
 
 const float radius = 10.0f;
 //float zpos = 10.0f;
@@ -112,6 +141,10 @@ float camerayaw = 90.0f;
 float camerapitch = 30.0f;
 bool cameraselected = false;
 vec3 cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+glm::vec3 lightPosition(1.0f, 1.0f, 1.0f);
+glm::mat4 myMatrix;
+glm::mat4 scaleMatrix;
+
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -160,10 +193,12 @@ int initWindow(void) {
 void initOpenGL(void) {
 	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
+	//glDisable(GL_DEPTH_TEST);
 	// Accept fragment if it closer to the camera than the former one
 	glDepthFunc(GL_LESS);
 	// Cull triangles which normal is not towards the camera
 	glEnable(GL_CULL_FACE);
+	//glDisable(GL_CULL_FACE);
 
 	// Projection matrix : 45  Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
 	gProjectionMatrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.0f);
@@ -200,11 +235,6 @@ void initOpenGL(void) {
 	NumVerts[0] = CoordVertsCount;
 
 	createVAOs(CoordVerts, NULL, 0);
-
-	VertexBufferSize[1] = sizeof(GridVerts);
-	NumVerts[1] = GridVertsCount;
-
-	createVAOs(GridVerts, NULL, 1);
 }
 
 void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
@@ -298,6 +328,10 @@ void createObjects(void) {
 
 	//-- GRID --//
 
+	const size_t GridVertsCount = 44;
+	Vertex GridVerts[GridVertsCount];
+
+
 	// ATTN: Create your grid vertices here!
 	for (int i = 0; i < 22; i += 2) { //Horizontal Lines
 		GridVerts[i] = { { float(i) / 2.0f - 5.0f, 0.0, -5.0, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 1.0, 0.0} };
@@ -309,6 +343,38 @@ void createObjects(void) {
 		GridVerts[i + 1] = { { 5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 1.0, 0.0 } };
 	}
 
+	
+	VertexBufferSize[1] = sizeof(GridVerts);
+	NumVerts[1] = GridVertsCount;
+
+	createVAOs(GridVerts, NULL, 1);
+
+	loadObject("../objects/base.obj", glm::vec4(1.0, 0.0, 0.0, 1.0), baseVerts, baseIdcs, 2);
+	createVAOs(baseVerts, baseIdcs, 2);
+	
+	loadObject("../objects/top.obj", glm::vec4(0.0, 1.0, 0.0, 1.0), topVerts, topIdcs, 3);
+	createVAOs(topVerts, topIdcs, 3);
+
+	myMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 1.0f, 0.0f));
+	for (int i = 0; i < NumIdcs[3]; i++) {
+		topVerts[i].ModifyVertexViaMatrix(myMatrix);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], topVerts);	// update buffer data
+	glBindVertexArray(0);
+
+	loadObject("../objects/arm1.obj", glm::vec4(0.0, 0.0, 1.0, 1.0), arm1Verts, arm1Idcs, 4);
+	createVAOs(arm1Verts, arm1Idcs, 4);
+
+	myMatrix = glm::translate(glm::mat4(), glm::vec3(1.5f, 1.1f, 0.0f));
+	scaleMatrix = glm::scale(myMatrix, glm::vec3(1.0f, 0.5f, 1.0f));
+	for (int i = 0; i < NumIdcs[4]; i++) {
+		arm1Verts[i].ModifyVertexViaMatrix(scaleMatrix);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[4], arm1Verts);	// update buffer data
+	glBindVertexArray(0);
+
 
 	//-- .OBJs --//
 
@@ -317,6 +383,7 @@ void createObjects(void) {
 	// GLushort* Idcs;
 	// loadObject("models/base.obj", glm::vec4(1.0, 0.0, 0.0, 1.0), Verts, Idcs, ObjectID);
 	// createVAOs(Verts, Idcs, ObjectID);
+
 }
 
 void pickObject(void) {
@@ -388,10 +455,21 @@ void renderScene(void) {
 		glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
 		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
-		for (int i = 0; i < NumObjects; i++) {
-			glBindVertexArray(VertexArrayId[i]);
-			glDrawArrays(GL_LINES, 0, NumVerts[i]);
+		//std::cout << NumIdcs[2] << " " << NumIdcs[1] << std::endl;
+		//for (int i = 0; i< NumIdcs[2]; i++) {
+		//	baseVerts[i].ModifyPosition(4.0f, 0.0f, 0.0f);
+		//}
+		//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], baseVerts);	// update buffer data
 
+		//Manipulating Specific objects: aka remake vao everytime or what?, half of objects not showing up
+		for (int i = 0; i < NumObjects; i++) {
+			if (i < 2) {
+				glBindVertexArray(VertexArrayId[i]);
+				glDrawArrays(GL_LINES, 0, NumVerts[i]);
+			} else if (i >= 2){
+				glBindVertexArray(VertexArrayId[i]);
+				glDrawElements(GL_TRIANGLES, NumIdcs[i], GL_UNSIGNED_SHORT,(void*)0);
+			}
 			glBindVertexArray(0);
 		}
 	}
@@ -425,6 +503,20 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 		switch (key)
 		{
 		case GLFW_KEY_A:
+			cout << "Translating" << endl;
+			myMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 2.0f, 0.0f));
+			for (int i = 0; i < NumIdcs[2]; i++) {
+				baseVerts[i].ModifyVertexViaMatrix(myMatrix);
+			}
+			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], baseVerts);	// update buffer data
+			glBindVertexArray(0);
+			//for (int i = 0; i < NumIdcs[2]; i++) {
+			//	baseVerts[i].ModifyPosition(0.0f, 2.0f, 0.0f);
+			//}
+			//glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
+			//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], baseVerts);	// update buffer data
+			//glBindVertexArray(0);
 			break;
 		case GLFW_KEY_D:
 			break;
@@ -534,7 +626,7 @@ int main(void) {
 
 	// ATTN (Project 3 only): Refer to https://learnopengl.com/Getting-started/Textures to familiarize yourself with mapping a texture
 	// to a given mesh
-
+	
 	// Initialize window
 	int errorCode = initWindow();
 	if (errorCode != 0)
