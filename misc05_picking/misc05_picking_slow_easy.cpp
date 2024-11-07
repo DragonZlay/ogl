@@ -20,20 +20,19 @@
 using namespace std;
 using namespace glm;
 // Include AntTweakBar
-#include <AntTweakBar.h>
+//#include <AntTweakBar.h>
 
 #include <common/shader.hpp>
 #include <common/controls.hpp>
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "..\objectLoading\tiny_obj_loader.h";
 
 const int window_width = 1024, window_height = 768;
 
 typedef struct Vertex {
 	float Position[4];
 	float Color[4];
+	float OriginalColor[4];
 	float Normal[3];
 	void SetPosition(float* coords) {
 		Position[0] = coords[0];
@@ -58,11 +57,18 @@ typedef struct Vertex {
 		Position[2] += z;
 	}
 	void ModifyVertexViaMatrix(glm::mat4 Matrix) {
-		glm::vec4 positionVector(Position[0], Position[1], Position[2], Position[3]);
+		glm::vec4 positionVector(this->Position[0], this->Position[1], this->Position[2], this->Position[3]);
 		glm::vec4 transformedVector = Matrix * positionVector;
 		for (int i = 0; i < 4; i++) {
 			Position[i] = transformedVector[i];
 		}
+	}
+	void ReturnToOriginalColor() {
+		Color[0] = OriginalColor[0];
+		Color[1] = OriginalColor[1];
+		Color[2] = OriginalColor[2];
+		Color[3] = OriginalColor[3];
+
 	}
 };
 
@@ -71,6 +77,7 @@ int initWindow(void);
 void initOpenGL(void);
 void createVAOs(Vertex[], GLushort[], int);
 void loadObject(char*, glm::vec4, Vertex*&, GLushort*&, int);
+void applyMatrix(glm::mat4, std::string);
 void createObjects(void);
 void pickObject(void);
 void renderScene(void);
@@ -127,6 +134,12 @@ Vertex* penVerts;
 GLushort* penIdcs;
 Vertex* buttonVerts;
 GLushort* buttonIdcs;
+std::string currentselection = "";
+vector<Vertex*> movesWithBase = { baseVerts, topVerts, arm1Verts, jointVerts, arm2Verts, penVerts, buttonVerts };
+vector<Vertex*> rotatesWithTop = { topVerts, arm1Verts, jointVerts, arm2Verts, penVerts, buttonVerts };
+vector<Vertex*> rotatesWithArm1 = { arm1Verts, jointVerts, arm2Verts, penVerts, buttonVerts };
+vector<Vertex*> rotatesWithArm2 = { arm2Verts, penVerts, buttonVerts };
+vector<Vertex*> rotatesWithPen = { penVerts, buttonVerts };
 
 const float radius = 10.0f;
 //float zpos = 10.0f;
@@ -160,7 +173,7 @@ int initWindow(void) {
 	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// FOR MAC
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(window_width, window_height, "Lastname,FirstName(ufid)", NULL, NULL);
+	window = glfwCreateWindow(window_width, window_height, "Hull,Tyler(32028280)", NULL, NULL);
 	if (window == NULL) {
 		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
 		glfwTerminate();
@@ -176,11 +189,11 @@ int initWindow(void) {
 	}
 
 	// Initialize the GUI
-	TwInit(TW_OPENGL_CORE, NULL);
-	TwWindowSize(window_width, window_height);
-	TwBar* GUI = TwNewBar("Picking");
-	TwSetParam(GUI, NULL, "refresh", TW_PARAM_CSTRING, 1, "0.1");
-	TwAddVarRW(GUI, "Last picked object", TW_TYPE_STDSTRING, &gMessage, NULL);
+	//TwInit(TW_OPENGL_CORE, NULL);
+	//TwWindowSize(window_width, window_height);
+	//TwBar* GUI = TwNewBar("Picking");
+	//TwSetParam(GUI, NULL, "refresh", TW_PARAM_CSTRING, 1, "0.1");
+	//TwAddVarRW(GUI, "Last picked object", TW_TYPE_STDSTRING, &gMessage, NULL);
 
 	// Set up inputs
 	glfwSetCursorPos(window, window_width / 2, window_height / 2);
@@ -317,6 +330,69 @@ void loadObject(char* file, glm::vec4 color, Vertex*& out_Vertices, GLushort*& o
 	IndexBufferSize[ObjectId] = sizeof(GLushort) * idxCount;
 }
 
+void applyMatrix(glm::mat4 matrix, std::string objname) {
+	if (objname == "base") {
+		for (int i = 0; i < NumIdcs[2]; i++) {
+			baseVerts[i].ModifyVertexViaMatrix(matrix);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], baseVerts);	// update buffer data
+		glBindVertexArray(0);
+	}
+	else if (objname == "top") {
+		for (int i = 0; i < NumIdcs[3]; i++) {
+			topVerts[i].ModifyVertexViaMatrix(matrix);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], topVerts);	// update buffer data
+		glBindVertexArray(0);
+	}
+	else if (objname == "arm1") {
+		for (int i = 0; i < NumIdcs[4]; i++) {
+			arm1Verts[i].ModifyVertexViaMatrix(matrix);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[4], arm1Verts);	// update buffer data
+		glBindVertexArray(0);
+	}
+	else if (objname == "joint") {
+		for (int i = 0; i < NumIdcs[5]; i++) {
+			jointVerts[i].ModifyVertexViaMatrix(matrix);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[5]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[5], jointVerts);	// update buffer data
+		glBindVertexArray(0);
+	}
+	else if (objname == "arm2") {
+		for (int i = 0; i < NumIdcs[6]; i++) {
+			arm2Verts[i].ModifyVertexViaMatrix(matrix);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[6]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[6], arm2Verts);	// update buffer data
+		glBindVertexArray(0);
+	}
+	else if (objname == "pen") {
+		for (int i = 0; i < NumIdcs[7]; i++) {
+			penVerts[i].ModifyVertexViaMatrix(matrix);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[7]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[7], penVerts);	// update buffer data
+		glBindVertexArray(0);
+	}
+	else if (objname == "button") {
+		for (int i = 0; i < NumIdcs[8]; i++) {
+			buttonVerts[i].ModifyVertexViaMatrix(matrix);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[8], buttonVerts);	// update buffer data
+		glBindVertexArray(0);
+
+	}
+	else {
+		std::cout << "Cannot apply matrix, object does not exist!" << std::endl;
+	}
+}
+
 void createObjects(void) {
 	//-- COORDINATE AXES --//
 	CoordVerts[0] = { { 0.0, 0.0, 0.0, 1.0 }, { 1.0, 0.0, 0.0, 1.0 }, { 0.0, 0.0, 1.0 } };
@@ -421,6 +497,9 @@ void createObjects(void) {
 	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[8], buttonVerts);	// update buffer data
 	glBindVertexArray(0);
 
+	
+
+
 	//-- .OBJs --//
 
 	// ATTN: Load your models here through .obj files -- example of how to do so is as shown
@@ -516,11 +595,12 @@ void renderScene(void) {
 				glDrawElements(GL_TRIANGLES, NumIdcs[i], GL_UNSIGNED_SHORT,(void*)0);
 			}
 			glBindVertexArray(0);
+
 		}
 	}
 	glUseProgram(0);
 	// Draw GUI
-	TwDraw();
+	//TwDraw();
 
 	// Swap buffers
 	glfwSwapBuffers(window);
@@ -531,9 +611,11 @@ void cleanup(void) {
 	// Cleanup VBO and shader
 
 	for (int i = 0; i < NumObjects; i++) {
-		glDeleteBuffers(1, &VertexBufferId[i]);
-		glDeleteBuffers(1, &IndexBufferId[i]);
-		glDeleteVertexArrays(1, &VertexArrayId[i]);
+		if (&VertexBufferId[i] != nullptr) {
+			glDeleteBuffers(1, &VertexBufferId[i]);
+			glDeleteBuffers(1, &IndexBufferId[i]);
+			glDeleteVertexArrays(1, &VertexArrayId[i]);
+		}
 	}
 	glDeleteProgram(programID);
 	glDeleteProgram(pickingProgramID);
@@ -564,19 +646,28 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], baseVerts);	// update buffer data
 			//glBindVertexArray(0);
 			break;
-		case GLFW_KEY_D:
-			break;
-		case GLFW_KEY_W:
-			break;
-		case GLFW_KEY_S:
-			break;
 		case GLFW_KEY_C:
-			cameraselected = !cameraselected;
+			//cameraselected = !cameraselected;
+			currentselection = "camera";
 			break;
-		case GLFW_KEY_SPACE:
+		case GLFW_KEY_P:
+			currentselection = "pen";
+			break;
+		case GLFW_KEY_B:
+			currentselection = "base";
+			break;
+		case GLFW_KEY_T:
+			currentselection = "top";
+			break;
+		case GLFW_KEY_1:
+			currentselection = "arm1";
+			break;
+		case GLFW_KEY_2:
+			currentselection = "arm2";
 			break;
 		case GLFW_KEY_UP:
-			if (cameraselected) {
+			
+			if (currentselection == "camera") {
 				camerapitch += 5.0f;
 				if (camerapitch >= 89.0)
 				{
@@ -585,9 +676,19 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
 				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 			}
+			else if (currentselection == "base") {
+				myMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, -1.0f));
+				applyMatrix(myMatrix, "base");
+				applyMatrix(myMatrix, "top");
+				applyMatrix(myMatrix, "arm1");
+				applyMatrix(myMatrix, "joint");
+				applyMatrix(myMatrix, "arm2");
+				applyMatrix(myMatrix, "pen");
+				applyMatrix(myMatrix, "button");
+			}
 			break;
 		case GLFW_KEY_DOWN:
-			if (cameraselected) {
+			if (currentselection == "camera") {
 				camerapitch -= 5.0f;
 				if (camerapitch <= -89.0)
 				{
@@ -595,20 +696,64 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 				}
 				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
 				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			} else if (currentselection == "base") {
+				myMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, 1.0f));
+				applyMatrix(myMatrix, "base");
+				applyMatrix(myMatrix, "top");
+				applyMatrix(myMatrix, "arm1");
+				applyMatrix(myMatrix, "joint");
+				applyMatrix(myMatrix, "arm2");
+				applyMatrix(myMatrix, "pen");
+				applyMatrix(myMatrix, "button");
 			}
 			break;
 		case GLFW_KEY_LEFT:
-			if (cameraselected) {
+			if (currentselection == "camera") {
 				camerayaw += 5.0f;
 				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
 				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			} else if (currentselection == "base") {
+				myMatrix = glm::translate(glm::mat4(), glm::vec3(-1.0f, 0.0f, 0.0f));
+				applyMatrix(myMatrix, "base");
+				applyMatrix(myMatrix, "top");
+				applyMatrix(myMatrix, "arm1");
+				applyMatrix(myMatrix, "joint");
+				applyMatrix(myMatrix, "arm2");
+				applyMatrix(myMatrix, "pen");
+				applyMatrix(myMatrix, "button");
+			}
+			else if (currentselection == "top") {
+				myMatrix = glm::rotate(glm::mat4(), glm::radians(30.0f), glm::vec3(0.0, 1.0, 0.0));
+				applyMatrix(myMatrix, "top");
+				applyMatrix(myMatrix, "arm1");
+				applyMatrix(myMatrix, "joint");
+				applyMatrix(myMatrix, "arm2");
+				applyMatrix(myMatrix, "pen");
+				applyMatrix(myMatrix, "button");
 			}
 			break;
 		case GLFW_KEY_RIGHT:
-			if (cameraselected) {
+			if (currentselection == "camera") {
 				camerayaw -= 5.0f;
 				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
 				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			} else if (currentselection == "base") {
+				myMatrix = glm::translate(glm::mat4(), glm::vec3(1.0f, 0.0f, 0.0f));
+				applyMatrix(myMatrix, "base");
+				applyMatrix(myMatrix, "top");
+				applyMatrix(myMatrix, "arm1");
+				applyMatrix(myMatrix, "joint");
+				applyMatrix(myMatrix, "arm2");
+				applyMatrix(myMatrix, "pen");
+				applyMatrix(myMatrix, "button");
+			} else if (currentselection == "top") {
+				myMatrix = glm::rotate(glm::mat4(), glm::radians(30.0f), glm::vec3(0.0, 1.0, 0.0));
+				applyMatrix(myMatrix, "top");
+				applyMatrix(myMatrix, "arm1");
+				applyMatrix(myMatrix, "joint");
+				applyMatrix(myMatrix, "arm2");
+				applyMatrix(myMatrix, "pen");
+				applyMatrix(myMatrix, "button");
 			}
 			break;
 		default:
@@ -619,7 +764,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 		switch (key)
 		{
 		case GLFW_KEY_UP:
-			if (cameraselected) {
+			if (currentselection == "camera") {
 				camerapitch += 5.0f;
 				if (camerapitch >= 89.0)
 				{
@@ -630,7 +775,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			}
 			break;
 		case GLFW_KEY_DOWN:
-			if (cameraselected) {
+			if (currentselection == "camera") {
 				camerapitch -= 5.0f;
 				if (camerapitch <= -89.0)
 				{
@@ -641,14 +786,14 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			}
 			break;
 		case GLFW_KEY_LEFT:
-			if (cameraselected) {
+			if (currentselection == "camera") {
 				camerayaw += 5.0f;
 				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
 				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 			}
 			break;
 		case GLFW_KEY_RIGHT:
-			if (cameraselected) {
+			if (currentselection == "camera") {
 				camerayaw -= 5.0f;
 				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
 				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
