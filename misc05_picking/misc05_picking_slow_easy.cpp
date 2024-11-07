@@ -90,7 +90,7 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 
-const GLuint NumObjects = 5;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
+const GLuint NumObjects = 9;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
@@ -366,15 +366,60 @@ void createObjects(void) {
 	loadObject("../objects/arm1.obj", glm::vec4(0.0, 0.0, 1.0, 1.0), arm1Verts, arm1Idcs, 4);
 	createVAOs(arm1Verts, arm1Idcs, 4);
 
-	myMatrix = glm::translate(glm::mat4(), glm::vec3(1.5f, 1.1f, 0.0f));
-	scaleMatrix = glm::scale(myMatrix, glm::vec3(1.0f, 0.5f, 1.0f));
+	myMatrix = glm::translate(glm::mat4(), glm::vec3(0.9f, 1.0f, 0.0f));
+	//scaleMatrix = glm::scale(myMatrix, glm::vec3(1.0f, 0.5f, 1.0f));
 	for (int i = 0; i < NumIdcs[4]; i++) {
-		arm1Verts[i].ModifyVertexViaMatrix(scaleMatrix);
+		arm1Verts[i].ModifyVertexViaMatrix(myMatrix);
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[4], arm1Verts);	// update buffer data
 	glBindVertexArray(0);
 
+	loadObject("../objects/joint.obj", glm::vec4(1.0, 0.0, 1.0, 1.0), jointVerts, jointIdcs, 5);
+	createVAOs(jointVerts, jointIdcs, 5);
+
+	myMatrix = glm::translate(glm::mat4(), glm::vec3(1.95f, 1.0f, 0.0f));
+	//scaleMatrix = glm::scale(myMatrix, glm::vec3(0.4f, 0.4f, 0.4f));
+	for (int i = 0; i < NumIdcs[5]; i++) {
+		jointVerts[i].ModifyVertexViaMatrix(myMatrix);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[5]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[5], jointVerts);	// update buffer data
+	glBindVertexArray(0);
+
+
+	loadObject("../objects/arm2.obj", glm::vec4(0.0, 0.75, 1.0, 1.0), arm2Verts, arm2Idcs, 6);
+	createVAOs(arm2Verts, arm2Idcs, 6);
+
+	myMatrix = glm::translate(glm::mat4(), glm::vec3(1.95f, 0.4f, 0.0f));
+	for (int i = 0; i < NumIdcs[6]; i++) {
+		arm2Verts[i].ModifyVertexViaMatrix(myMatrix);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[6]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[6], arm2Verts);	// update buffer data
+	glBindVertexArray(0);
+
+	loadObject("../objects/pen.obj", glm::vec4(1.0, 1.0, 0.0, 1.0), penVerts, penIdcs, 7);
+	createVAOs(penVerts, penIdcs, 7);
+
+	myMatrix = glm::translate(glm::mat4(), glm::vec3(1.95f, -0.5f, 0.0f));
+	for (int i = 0; i < NumIdcs[7]; i++) {
+		penVerts[i].ModifyVertexViaMatrix(myMatrix);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[7]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[7], penVerts);	// update buffer data
+	glBindVertexArray(0);
+
+	loadObject("../objects/button.obj", glm::vec4(1.0, 0.0, 0.0, 1.0), buttonVerts, buttonIdcs, 8);
+	createVAOs(buttonVerts, buttonIdcs, 8);
+
+	myMatrix = glm::translate(glm::mat4(), glm::vec3(1.95f, -0.75f, 0.0f));
+	for (int i = 0; i < NumIdcs[8]; i++) {
+		buttonVerts[i].ModifyVertexViaMatrix(myMatrix);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[8], buttonVerts);	// update buffer data
+	glBindVertexArray(0);
 
 	//-- .OBJs --//
 
@@ -484,6 +529,7 @@ void renderScene(void) {
 
 void cleanup(void) {
 	// Cleanup VBO and shader
+
 	for (int i = 0; i < NumObjects; i++) {
 		glDeleteBuffers(1, &VertexBufferId[i]);
 		glDeleteBuffers(1, &IndexBufferId[i]);
