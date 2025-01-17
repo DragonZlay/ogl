@@ -82,7 +82,7 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 
-const GLuint NumObjects = 9;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
+const GLuint NumObjects = 3;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
@@ -105,44 +105,19 @@ GLuint LightID;
 // TL
 const size_t CoordVertsCount = 6;
 Vertex CoordVerts[CoordVertsCount];
-Vertex* baseVerts;
-GLushort* baseIdcs;
-Vertex* topVerts;
-GLushort* topIdcs;
-Vertex* arm1Verts;
-GLushort* arm1Idcs;
-Vertex* jointVerts;
-GLushort* jointIdcs;
-Vertex* arm2Verts;
-GLushort* arm2Idcs;
-Vertex* penVerts;
-GLushort* penIdcs;
-Vertex* buttonVerts;
-GLushort* buttonIdcs;
+Vertex* headVerts;
+GLushort* headIdcs;
 std::string currentselection = "";
-vector<Vertex*> movesWithBase = { baseVerts, topVerts, arm1Verts, jointVerts, arm2Verts, penVerts, buttonVerts };
-vector<Vertex*> rotatesWithTop = { topVerts, arm1Verts, jointVerts, arm2Verts, penVerts, buttonVerts };
-vector<Vertex*> rotatesWithArm1 = { arm1Verts, jointVerts, arm2Verts, penVerts, buttonVerts };
-vector<Vertex*> rotatesWithArm2 = { arm2Verts, penVerts, buttonVerts };
-vector<Vertex*> rotatesWithPen = { penVerts, buttonVerts };
 bool shiftheld = false;
+bool wireframe = false;
 
 const float radius = 10.0f;
-//float zpos = 10.0f;
-//float ypos = 10.0f;
-//float xpos = 10.0f;
-///float parallelaxis = 0.0f;
-//float orthogonalaxis = 0.0f
-// ;
 
 const float floatpi = 3.14159274101257324219;
 float camerayaw = 90.0f;
 float camerapitch = 30.0f;
 bool cameraselected = false;
 vec3 cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
-glm::vec3 lightPosition(1.0f, 1.0f, 1.0f);
-glm::mat4 myMatrix;
-glm::mat4 scaleMatrix;
 
 
 
@@ -346,63 +321,14 @@ void createObjects(void) {
 		GridVerts[i] = { { -5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0}, {1.0, 1.0, 1.0, 1.0}, {0.0, 1.0, 0.0} };
 		GridVerts[i + 1] = { { 5.0, 0.0, float(i) / 2.0f - 16.0f, 1.0 }, { 1.0, 1.0, 1.0, 1.0 }, { 0.0, 1.0, 0.0 } };
 	}
-
-	
 	VertexBufferSize[1] = sizeof(GridVerts);
 	NumVerts[1] = GridVertsCount;
 
 	createVAOs(GridVerts, NULL, 1);
 
-	loadObject("../objects/base.obj", glm::vec4(1.0, 0.0, 0.0, 1.0), baseVerts, baseIdcs, 2);
-	createVAOs(baseVerts, baseIdcs, 2);
+	loadObject("../objects/headtemplate.obj", glm::vec4(0.5, 0.5, 0.5, 1.0), headVerts, headIdcs, 2);
+	createVAOs(headVerts, headIdcs, 2);
 	
-	
-
-	loadObject("../objects/top.obj", glm::vec4(0.0, 1.0, 0.0, 1.0), topVerts, topIdcs, 3);
-	createVAOs(topVerts, topIdcs, 3);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], topVerts);	// update buffer data
-	glBindVertexArray(0);
-
-	loadObject("../objects/arm1.obj", glm::vec4(0.0, 0.0, 1.0, 1.0), arm1Verts, arm1Idcs, 4);
-	createVAOs(arm1Verts, arm1Idcs, 4);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[4], arm1Verts);	// update buffer data
-	glBindVertexArray(0);
-
-	loadObject("../objects/joint.obj", glm::vec4(1.0, 0.0, 1.0, 1.0), jointVerts, jointIdcs, 5);
-	createVAOs(jointVerts, jointIdcs, 5);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[5]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[5], jointVerts);	// update buffer data
-	glBindVertexArray(0);
-
-
-	loadObject("../objects/arm2.obj", glm::vec4(0.0, 0.75, 1.0, 1.0), arm2Verts, arm2Idcs, 6);
-	createVAOs(arm2Verts, arm2Idcs, 6);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[6]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[6], arm2Verts);	// update buffer data
-	glBindVertexArray(0);
-
-	loadObject("../objects/pen.obj", glm::vec4(1.0, 1.0, 0.0, 1.0), penVerts, penIdcs, 7);
-	createVAOs(penVerts, penIdcs, 7);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[7]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[7], penVerts);	// update buffer data
-	glBindVertexArray(0);
-
-	loadObject("../objects/button.obj", glm::vec4(1.0, 0.0, 0.0, 1.0), buttonVerts, buttonIdcs, 8);
-	createVAOs(buttonVerts, buttonIdcs, 8);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[8], buttonVerts);	// update buffer data
-	glBindVertexArray(0);
-
-	
-
 
 	//-- .OBJs --//
 
@@ -492,9 +418,16 @@ void renderScene(void) {
 		//Manipulating Specific objects: aka remake vao everytime or what?, half of objects not showing up
 		for (int i = 0; i < NumObjects; i++) {
 			if (i < 2) {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 				glBindVertexArray(VertexArrayId[i]);
 				glDrawArrays(GL_LINES, 0, NumVerts[i]);
 			} else if (i >= 2){
+				if (wireframe == true) {
+					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				}
+				else {
+					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				}
 				glBindVertexArray(VertexArrayId[i]);
 				glDrawElements(GL_TRIANGLES, NumIdcs[i], GL_UNSIGNED_SHORT,(void*)0);
 			}
@@ -534,47 +467,11 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	if (action == GLFW_PRESS) {
 		switch (key)
 		{
-		case GLFW_KEY_A:
-			glUseProgram(programID);
-			trans = glm::scale(trans, glm::vec3(5.0f, 2.0f, 2.0f));
-			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, glm::value_ptr(trans));
-			glEnableVertexAttribArray(0);
-			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
-			glVertexAttribPointer(
-				0,      // shader layout location
-				3,
-				GL_FLOAT,
-				GL_FALSE,
-				0,
-				(void*)0
-			);
-			glUseProgram(0);	
-			std::cout << "Moving" << endl;
-			break;
-		case GLFW_KEY_LEFT_SHIFT:
-			shiftheld = !shiftheld;
-			break;
 		case GLFW_KEY_C:
 			//cameraselected = !cameraselected;
 			currentselection = "camera";
 			break;
-		case GLFW_KEY_P:
-			currentselection = "pen";
-			break;
-		case GLFW_KEY_B:
-			currentselection = "base";
-			break;
-		case GLFW_KEY_T:
-			currentselection = "top";
-			break;
-		case GLFW_KEY_1:
-			currentselection = "arm1";
-			break;
-		case GLFW_KEY_2:
-			currentselection = "arm2";
-			break;
 		case GLFW_KEY_UP:
-
 			if (currentselection == "camera") {
 				camerapitch += 5.0f;
 				if (camerapitch >= 89.0)
@@ -609,6 +506,17 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 				cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
 				gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 			}
+			break;
+		case GLFW_KEY_F:
+			wireframe = !wireframe;
+			break;
+		case GLFW_KEY_R:
+			wireframe = false;
+			camerayaw = 90.0f;
+			camerapitch = 30.0f;
+			currentselection = "none";
+			cameradirection = glm::vec3(cos(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)), sin(glm::radians(camerapitch)), sin(glm::radians(camerayaw)) * cos(glm::radians(camerapitch)));
+			gViewMatrix = glm::lookAt(radius * cameradirection, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 			break;
 		default:
 			break;
